@@ -1,0 +1,345 @@
+1. Project Structure
+
+
+
+arduino
+
+
+
+
+
+
+task_management_app/
+│
+├── templates/
+│   ├── base.html
+│   ├── home.html
+│   ├── dashboard.html
+│   ├── task_detail.html
+│   ├── task_create.html
+│   ├── task_edit.html
+│   ├── register.html
+│   ├── login.html
+│
+├── static/
+│   ├── css/
+│   ├── js/
+│
+├── app.py
+├── models.py
+├── forms.py
+├── config.py
+└── run.py
+
+
+2. Setting Up Flask and Bootstrap
+
+
+config.py
+
+python
+
+
+
+import os
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'a_hard_to_guess_string'
+
+
+app.py
+
+python
+
+
+
+
+from flask import Flask
+from config import Config
+
+app = Flask(__name__)
+app.config.from_object(Config)
+
+from flask_bootstrap import Bootstrap
+Bootstrap(app)
+
+from routes import *
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+3. Routes
+
+
+routes.py
+
+python
+
+
+
+from flask import render_template, redirect, url_for, flash
+from app import app
+from forms import RegistrationForm, LoginForm, TaskForm
+
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+@app.route('/dashboard')
+def dashboard():
+    # Placeholder tasks for demonstration
+    tasks = [
+        {"id": 1, "title": "Task 1", "description": "Task 1 description"},
+        {"id": 2, "title": "Task 2", "description": "Task 2 description"}
+    ]
+    return render_template('dashboard.html', tasks=tasks)
+
+@app.route('/task/<int:id>')
+def task_detail(id):
+    task = {"id": id, "title": f"Task {id}", "description": f"Description for Task {id}"}
+    return render_template('task_detail.html', task=task)
+
+@app.route('/task/new', methods=['GET', 'POST'])
+def task_create():
+    form = TaskForm()
+    if form.validate_on_submit():
+        flash('Task created successfully', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('task_create.html', form=form)
+
+@app.route('/task/<int:id>/edit', methods=['GET', 'POST'])
+def task_edit(id):
+    task = {"id": id, "title": f"Task {id}", "description": f"Description for Task {id}"}
+    form = TaskForm(data=task)
+    if form.validate_on_submit():
+        flash('Task updated successfully', 'success')
+        return redirect(url_for('task_detail', id=id))
+    return render_template('task_edit.html', form=form, task=task)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        flash('Account created successfully', 'success')
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        flash('Login successful', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('login.html', form=form)
+
+
+4. Forms
+
+
+forms.py
+
+python
+
+
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo
+
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Register')
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+
+class TaskForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[DataRequired()])
+    submit = SubmitField('Submit')
+
+
+5. Templates
+
+
+templates/base.html
+
+html
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('home') }}">Task Management</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
+
+
+
+
+templates/home.html
+
+html
+
+
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to Task Management</h1>
+    <p class="lead">Manage your tasks efficiently and effectively.</p>
+    <hr class="my-4">
+    <p>Sign up or log in to get started.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('register') }}" role="button">Register</a>
+    <a class="btn btn-secondary btn-lg" href="{{ url_for('login') }}" role="button">Login</a>
+</div>
+{% endblock %}
+
+
+
+
+templates/dashboard.html
+
+
+
+html
+
+
+
+{% extends 'base.html' %}
+{% block content %}
+<h1>Task Dashboard</h1>
+<a href="{{ url_for('task_create') }}" class="btn btn-primary mb-3">Add New Task</a>
+<div class="row">
+    {% for task in tasks %}
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">{{ task.title }}</h5>
+                <p class="card-text">{{ task.description }}</p>
+                <a href="{{ url_for('task_detail', id=task.id) }}" class="btn btn-primary">View Task</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+templates/task_detail.html
+
+html
+Copy code
+{% extends 'base.html' %}
+{% block content %}
+<h1>Task Details</h1>
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">{{ task.title }}</h5>
+        <p class="card-text">{{ task.description }}</p>
+        <a href="{{ url_for('task_edit', id=task.id) }}" class="btn btn-primary">Edit Task</a>
+    </div>
+</div>
+{% endblock %}
+
+
+templates/task_create.html
+
+html
+
+
+
+
+{% extends 'base.html' %}
+{% block content %}
+<h1>Create New Task</h1>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.title.label(class="form-control-label") }}
+        {{ form.title(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.description.label(class="form-control-label") }}
+        {{ form.description(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+{% endblock %}
+
+
+templates/task_edit.html
+
+html
+
+
+
+{% extends 'base.html' %}
+{% block content %}
+<h1>Edit Task</h1>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.title.label(class="form-control-label") }}
+        {{ form.title(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.description.label(class="form-control-label") }}
+        {{ form.description(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+{% endblock %}
+
+
+templates/register.html
+
+html
+
+
+
+
+
+{% extends 'base.html' %}
+{% block content %}
+<h1>Register</h1
